@@ -1,0 +1,73 @@
+version: 2 # use CircleCI 2.0
+
+build: &build_steps
+  steps: # steps that comprise the `build` job
+    - checkout # check out source code to working directory
+    - run:
+        name: "Create a temp directory for artifacts and test results"
+        command: |
+          mkdir -p /tmp/artifacts
+          mkdir -p /tmp/test-results
+    - restore_cache: # restores saved cache if no changes are detected since last run
+        keys:
+          - go-echo-maintenance-{{ checksum "go.sum" }}
+    - run:
+        name : Install lint
+        command: |
+          go get -u golang.org/x/lint/golint
+    - run:
+        name: Build App
+        command: |
+          go build
+    - run:
+        name : Go Lint
+        command: |
+          /home/circleci/go/bin/golint ./...
+    - run:
+        name : Go Vet
+        command: |
+          go vet -v ./...
+    - run:
+        name : Unit Test
+        command: |
+          go test ./... -coverprofile=c.out
+          go tool cover -html=c.out -o coverage.html
+          mv coverage.html /tmp/artifacts
+          PACKAGE_NAMES=$(go list ./... | circleci tests split --split-by=timings --timings-type=classname)
+          gotestsum --junitfile /tmp/test-results/gotestsum-report.xml -- $PACKAGE_NAMES
+    - save_cache:
+        key: go-echo-maintenance-{{ checksum "go.sum" }}
+        paths:
+          - "/go/pkg/mod"
+    - store_artifacts:
+        path: /tmp/artifacts
+    - store_test_results: # upload test results for display in Test Summary
+        path: /tmp/test-results
+
+jobs:
+  go-1.13:
+    docker:
+      - image: circleci/golang:1.13
+        environment:
+          GOPATH: ""
+    <<: *build_steps
+  go-1.12.9:
+    docker:
+      - image: circleci/golang:1.12.9
+        environment:
+          GOPATH: ""
+    <<: *build_steps
+  go-1.11:
+    docker:
+      - image: circleci/golang:1.11
+        environment:
+          GOPATH: ""
+    <<: *build_steps
+
+workflows:
+  version: 2
+  build-workflow:
+    jobs:
+      - go-1.13
+      - go-1.12.9
+      - go-1.11
