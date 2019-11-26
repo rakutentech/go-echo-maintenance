@@ -1,3 +1,5 @@
+[![CircleCI](https://circleci.com/gh/rakutentech/go-echo-maintenance.svg?style=svg)](https://circleci.com/gh/rakutentech/go-echo-maintenance)
+
 # go-echo-maintenance
 
 Middleware for echo framework to make all requests respond according to a handler function based on the presence/absence of a file specified. It is built with `go version go1.13.1 darwin/amd64`
